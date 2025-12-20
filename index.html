@@ -31,6 +31,7 @@
         modalOpen: false,
         selectedTool: {},
         tools: [], 
+        articles: [],
         categories: ['全部', '聊天機器人', '圖像生成', '效率工具', '影音編輯', '辦公效率'],
         
         async init() {
@@ -55,6 +56,14 @@
                 console.log('成功獲取數據:', data);
                 this.tools = data; // 把拿到的數據放進頁面
             }
+           let { data: articlesData, error: articlesError } = await client
+                .from('articles')
+                .select('*')
+                .order('date', { ascending: false }) // 按日期降序排列（最新的在前面）
+                .limit(3); // 只顯示最新的 3 篇
+
+               if (articlesError) console.error('文章讀取失敗', articlesError);
+               else this.articles = articlesData;
         },
         
         // ... 以下代碼保持不變 ...
@@ -126,6 +135,25 @@
         <div x-show="filteredTools.length === 0" class="text-center py-12 text-slate-500">
             沒有找到相關工具，試試其他關鍵詞？
         </div>
+<div class="mt-24 border-t border-slate-800 pt-16 mb-16" x-show="articles.length > 0">
+    
+    <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-bold text-white border-l-4 border-blue-500 pl-4">最新 AI 動態</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <template x-for="post in articles">
+            <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:bg-slate-800 transition">
+                <div class="text-sm text-blue-400 mb-2" x-text="post.date"></div>
+                <h3 class="text-xl font-bold text-white mb-3 line-clamp-2" x-text="post.title"></h3>
+                <p class="text-slate-400 text-sm mb-4 line-clamp-3" x-text="post.summary"></p>
+                <a :href="post.link" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1">
+                    閱讀更多 <span>&rarr;</span>
+                </a>
+            </div>
+        </template>
+    </div>
+</div>
     </main>
 
     <footer class="border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
