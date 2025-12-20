@@ -17,79 +17,63 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4809046728250303"
      crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; background-color: #0f172a; color: #e2e8f0; }
         .tool-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); border-color: #3b82f6; }
         [x-cloak] { display: none !important; } /* 防止刷新時閃爍 */
     </style>
 </head>
-<body class="min-h-screen flex flex-col" 
+<body class="min-h-screen flex flex-col"
       x-data="{
         search: '',
         category: '全部',
         modalOpen: false,
         selectedTool: {},
-        tools: [
-            { 
-                name: 'ChatGPT', 
-                desc: 'OpenAI 開發的最強對話模型', 
-                detail: '目前全球最強大的通用大語言模型，支持代碼編寫、創意寫作、翻譯等多種任務。GPT-4 版本更是具備了識圖和聯網能力。',
-                url: 'https://chat.openai.com', 
-                tag: '聊天機器人', 
-                icon: '🤖' 
-            },
-            { 
-                name: 'Midjourney', 
-                desc: 'AI 繪畫生成神器，藝術感極強', 
-                detail: '運行在 Discord 上的圖像生成工具，以其極具藝術感和細節豐富的畫風著稱，是設計師和藝術家的首選工具。',
-                url: 'https://www.midjourney.com', 
-                tag: '圖像生成', 
-                icon: '🎨' 
-            },
-            { 
-                name: 'Notion AI', 
-                desc: '集成在筆記中的寫作助手', 
-                detail: '直接集成在 Notion 筆記軟件中，可以幫你總結文章、潤色郵件、列大綱，甚至自動生成表格。',
-                url: 'https://www.notion.so', 
-                tag: '效率工具', 
-                icon: '📝' 
-            },
-            { 
-                name: 'Runway', 
-                desc: '專業級的 AI 視頻編輯與生成工具', 
-                detail: '好萊塢級別的 AI 視頻工具，支持視頻摳圖、文字生成視頻（Gen-2），是視頻創作者的神器。',
-                url: 'https://runwayml.com', 
-                tag: '影音編輯', 
-                icon: '🎬' 
-            },
-            { 
-                name: 'Gamma', 
-                desc: '一鍵生成精美的 PPT 幻燈片', 
-                detail: '輸入一個主題，Gamma 就能自動生成大綱、配圖並排版成漂亮的 PPT，支持導出 PDF 和 PPTX。',
-                url: 'https://gamma.app', 
-                tag: '辦公效率', 
-                icon: '📊' 
-            }
-        ],
+        tools: [], 
         categories: ['全部', '聊天機器人', '圖像生成', '效率工具', '影音編輯', '辦公效率'],
         
-        // 打開彈窗的邏輯
+        async init() {
+            // --- 這裡配置你的 Supabase ---
+            // 1. 填入你的 Project URL (在設置頁面頂部)
+            const supabaseUrl = 'https://vosylbedplgidnoblywv.supabase.co'; 
+            
+            // 2. 填入你的 Publishable Key (就是你截圖裡那個)
+            const supabaseKey = 'sb_publishable_2zpdC20-1R3FeYmgDuIaNg_hrz4J73c';
+            
+            // 初始化連接
+            const client = supabase.createClient(supabaseUrl, supabaseKey);
+
+            // 去數據庫取數據
+            let { data, error } = await client
+                .from('tools') // 這裡對應你剛才建的表名 'tools'
+                .select('*');
+                
+            if (error) {
+                console.error('數據讀取失敗:', error);
+            } else {
+                console.log('成功獲取數據:', data);
+                this.tools = data; // 把拿到的數據放進頁面
+            }
+        },
+        
+        // ... 以下代碼保持不變 ...
         openModal(tool) {
             this.selectedTool = tool;
             this.modalOpen = true;
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            document.body.style.overflow = 'hidden';
         },
-        // 關閉彈窗的邏輯
         closeModal() {
             this.modalOpen = false;
-            document.body.style.overflow = 'auto'; // 恢復背景滾動
+            document.body.style.overflow = 'auto';
         },
-        // 篩選邏輯
         get filteredTools() {
             return this.tools.filter(tool => {
-                const matchSearch = tool.name.toLowerCase().includes(this.search.toLowerCase()) || tool.desc.toLowerCase().includes(this.search.toLowerCase());
+                // 防止數據為空時報錯，加個 ?. 
+                const nameMatch = tool.name?.toLowerCase().includes(this.search.toLowerCase());
+                const descMatch = tool.desc?.toLowerCase().includes(this.search.toLowerCase());
                 const matchCat = this.category === '全部' || tool.tag === this.category;
-                return matchSearch && matchCat;
+                return (nameMatch || descMatch) && matchCat;
             });
         }
     }">
