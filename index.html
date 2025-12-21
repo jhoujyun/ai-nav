@@ -30,6 +30,8 @@
         category: '全部',
         modalOpen: false,
         selectedTool: {},
+        articleModalOpen: false,
+        selectedArticle: {},
         tools: [], 
         articles: [],
         categories: ['全部', '聊天機器人', '圖像生成', '效率工具', '影音編輯', '辦公效率'],
@@ -74,6 +76,15 @@
         },
         closeModal() {
             this.modalOpen = false;
+            document.body.style.overflow = 'auto';
+        },
+         openArticleModal(article) {
+            this.selectedArticle = article;
+            this.articleModalOpen = true;
+            document.body.style.overflow = 'hidden';
+        },
+         closeArticleModal() {
+            this.articleModalOpen = false;
             document.body.style.overflow = 'auto';
         },
         get filteredTools() {
@@ -147,9 +158,10 @@
                 <div class="text-sm text-blue-400 mb-2" x-text="post.date"></div>
                 <h3 class="text-xl font-bold text-white mb-3 line-clamp-2" x-text="post.title"></h3>
                 <p class="text-slate-400 text-sm mb-4 line-clamp-3" x-text="post.summary"></p>
-                <a :href="post.link" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1">
-                    閱讀更多 <span>&rarr;</span>
-                </a>
+                <button @click="post.content ? openArticleModal(post) : window.open(post.link, '_blank')" 
+                  class="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1 cursor-pointer">
+                  閱讀全文 <span>&rarr;</span>
+                 </button>
             </div>
         </template>
     </div>
@@ -197,6 +209,39 @@
             </div>
         </div>
     </div>
+<div x-show="articleModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" 
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0">
+    
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeArticleModal()"></div>
 
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col relative shadow-2xl"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100">
+        
+        <div class="p-6 border-b border-slate-800 flex justify-between items-start sticky top-0 bg-slate-900 z-10 rounded-t-2xl">
+            <div>
+                <div class="text-blue-400 text-sm mb-2" x-text="selectedArticle.date"></div>
+                <h2 class="text-2xl font-bold text-white leading-tight" x-text="selectedArticle.title"></h2>
+            </div>
+            <button @click="closeArticleModal()" class="text-slate-400 hover:text-white text-2xl ml-4">✕</button>
+        </div>
+
+        <div class="p-8 overflow-y-auto text-slate-300 leading-relaxed text-lg whitespace-pre-line">
+            <span x-text="selectedArticle.content"></span>
+            
+            <div x-show="selectedArticle.link" class="mt-8 pt-8 border-t border-slate-800">
+                <a :href="selectedArticle.link" target="_blank" class="inline-flex items-center text-blue-400 hover:underline">
+                    🔗 訪問原文鏈接
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
