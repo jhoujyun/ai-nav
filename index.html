@@ -73,8 +73,6 @@
                 .order('date', { ascending: false })
                 .limit(3);
 
-              console.log('我的文章數據:', articlesData);
-
             if (articlesData) {
                 this.articles = articlesData;
             }
@@ -232,9 +230,12 @@
                 <a :href="selectedTool.url" target="_blank" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-center py-3 rounded-xl font-bold transition flex justify-center items-center gap-2">
                     訪問官網 <span>↗</span>
                 </a>
-                <button @click="navigator.clipboard.writeText(selectedTool.url); $el.innerText = '已複製!'" class="px-6 border border-slate-600 hover:bg-slate-800 text-slate-300 rounded-xl font-medium transition">
-                    複製鏈接
-                </button>
+           <button x-data="{ copied: false }" 
+                  @click="navigator.clipboard.writeText(selectedTool.url); copied = true; setTimeout(() => copied = false, 2000)" 
+                  class="px-6 border border-slate-600 hover:bg-slate-800 text-slate-300 rounded-xl font-medium transition min-w-[120px]">
+              <span x-show="!copied">複製連結</span>
+              <span x-show="copied" class="text-green-400 flex items-center gap-1">✓ 已複製</span>
+          </button>
             </div>
         </div>
     </div>
