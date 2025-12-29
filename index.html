@@ -48,25 +48,27 @@
         selectedArticle: {},
         tools: [], 
         articles: [],
-        isLoading: true, // 開啟加載狀態
-        categories: ['全部', '聊天機器人', '圖像生成', '效率工具', '影音編輯', '辦公效率'],
+        isLoading: true,
+        
+        // 1. 定义首页要展示的分类顺序
+        homeCategories: ['聊天機器人', '圖像生成', '效率工具', '影音編輯', '辦公效率'],
         
         async init() {
             const supabaseUrl = 'https://vosylbedplgidnoblywv.supabase.co'; 
             const supabaseKey = 'sb_publishable_2zpdC20-1R3FeYmgDuIaNg_hrz4J73c';
             const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-            // 1. 獲取工具 (按 ID 倒序，新工具在前)
+            // 获取所有工具
             let { data: toolsData, error } = await client
                 .from('tools')
                 .select('*')
-                .order('id', { ascending: false });
+                .order('id', { ascending: false }); // 默认按新旧排序
                 
             if (!error) {
                 this.tools = toolsData;
             }
 
-            // 2. 獲取文章 (按日期倒序)
+            // 获取文章
             let { data: articlesData } = await client
                 .from('articles')
                 .select('*')
@@ -77,8 +79,27 @@
                 this.articles = articlesData;
             }
 
-            // 3. 數據加載完成，關閉骨架屏
             this.isLoading = false; 
+        },
+        
+        // 2. 辅助函数：获取指定分类的前9个工具
+        getHomeTools(catName) {
+            return this.tools.filter(t => t.tag === catName).slice(0, 9);
+        },
+
+        // 3. 判断是否处于'首页展示模式' (无搜索且分类为全部)
+        get isHomeView() {
+            return this.search === '' && this.category === '全部';
+        },
+
+        // 筛选逻辑 (用于搜索模式)
+        get filteredTools() {
+            return this.tools.filter(tool => {
+                const nameMatch = tool.name?.toLowerCase().includes(this.search.toLowerCase());
+                const descMatch = tool.desc?.toLowerCase().includes(this.search.toLowerCase());
+                const matchCat = this.category === '全部' || tool.tag === this.category;
+                return (nameMatch || descMatch) && matchCat;
+            });
         },
         
         openModal(tool) {
@@ -98,20 +119,12 @@
         closeArticleModal() {
             this.articleModalOpen = false;
             document.body.style.overflow = 'auto';
-        },
-        get filteredTools() {
-            return this.tools.filter(tool => {
-                const nameMatch = tool.name?.toLowerCase().includes(this.search.toLowerCase());
-                const descMatch = tool.desc?.toLowerCase().includes(this.search.toLowerCase());
-                const matchCat = this.category === '全部' || tool.tag === this.category;
-                return (nameMatch || descMatch) && matchCat;
-            });
         }
     }">
 
     <header class="border-b border-slate-700 bg-slate-800/50 backdrop-blur sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <a href="index.html" class="flex items-center gap-3 group cursor-pointer">
+            <a href="index.html" @click.prevent="category='全部'; search=''" class="flex items-center gap-3 group cursor-pointer">
                 <img src="logo.svg" alt="AI 導航 Logo" class="h-10 w-auto transition-transform group-hover:scale-105">
                 <span class="text-xl font-bold text-white tracking-wide">AI 導航</span>
             </a>
@@ -127,14 +140,14 @@
             <h1 class="text-4xl md:text-5xl font-extrabold mb-4 text-white">探索未來的 AI 工具</h1>
             <p class="text-slate-400 text-lg mb-8">收錄全球最新、最實用的 AI 效率神器</p>
             <div class="max-w-xl mx-auto relative">
-                <input x-model="search" type="text" placeholder="搜索工具名稱或描述..." 
+                <input x-model="search" type="text" placeholder="搜尋工具名稱或描述..." 
                        class="w-full px-6 py-4 rounded-full bg-slate-800 border border-slate-600 focus:border-blue-500 focus:outline-none text-white shadow-lg transition">
                 <span class="absolute right-6 top-4 text-2xl">🔍</span>
             </div>
         </div>
 
-        <div class="flex flex-wrap justify-center gap-3 mb-10">
-            <template x-for="cat in categories">
+        <div class="flex flex-wrap justify-center gap-3 mb-12">
+            <template x-for="cat in ['全部', ...homeCategories]">
                 <button @click="category = cat" 
                         :class="category === cat ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'"
                         class="px-4 py-2 rounded-full text-sm font-medium transition"
@@ -151,34 +164,67 @@
                     </div>
                     <div class="w-3/4 h-6 bg-slate-700 rounded mb-2"></div>
                     <div class="w-full h-4 bg-slate-700 rounded mb-2"></div>
-                    <div class="w-2/3 h-4 bg-slate-700 rounded"></div>
                 </div>
             </template>
         </div>
 
-        <div x-show="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-transition.opacity>
-            <template x-for="tool in filteredTools">
-                <div @click="openModal(tool)" class="tool-card cursor-pointer bg-slate-800 border border-slate-700 rounded-xl p-6 transition duration-300 relative group">
-                    <div class="flex items-start justify-between mb-4">
-                        <span class="text-4xl" x-text="tool.icon"></span>
-                        <span class="text-xs font-semibold px-2 py-1 rounded bg-slate-700 text-slate-300" x-text="tool.tag"></span>
+        <div x-show="!isLoading && isHomeView" x-transition.opacity>
+            <template x-for="catName in homeCategories">
+                <div class="mb-16" x-show="getHomeTools(catName).length > 0">
+                    <div class="flex items-center justify-between mb-6 border-l-4 border-blue-500 pl-4">
+                        <h2 class="text-2xl font-bold text-white" x-text="catName"></h2>
+                        <button @click="category = catName; window.scrollTo({top: 0, behavior: 'smooth'})" 
+                                class="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1 transition group">
+                            更多 <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+                        </button>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-2" x-text="tool.name"></h3>
-                    <p class="text-slate-400 text-sm leading-relaxed" x-text="tool.desc"></p>
-                    <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition text-blue-400 text-sm">查看詳情 &rarr;</div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="tool in getHomeTools(catName)">
+                            <div @click="openModal(tool)" class="tool-card cursor-pointer bg-slate-800 border border-slate-700 rounded-xl p-6 transition duration-300 relative group hover:border-blue-500">
+                                <div class="flex items-start justify-between mb-4">
+                                    <span class="text-4xl" x-text="tool.icon"></span>
+                                    <span class="text-xs font-semibold px-2 py-1 rounded bg-slate-700 text-slate-300" x-text="tool.tag"></span>
+                                </div>
+                                <h3 class="text-xl font-bold text-white mb-2" x-text="tool.name"></h3>
+                                <p class="text-slate-400 text-sm leading-relaxed line-clamp-2" x-text="tool.desc"></p>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </template>
         </div>
 
-        <div x-show="!isLoading && filteredTools.length === 0" class="text-center py-12 text-slate-500" x-cloak>
-            沒有找到相關工具，試試其他關鍵詞？
+        <div x-show="!isLoading && !isHomeView" x-transition.opacity>
+            <div class="mb-6 text-slate-400 text-sm flex items-center gap-2">
+                <span>當前顯示：</span>
+                <span class="text-white font-bold" x-text="category"></span>
+                <span x-show="search"> | 搜尋關鍵詞: <span class="text-white" x-text="search"></span></span>
+                <button @click="category='全部'; search=''" class="ml-auto text-blue-400 hover:underline">清除篩選 ✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="tool in filteredTools">
+                    <div @click="openModal(tool)" class="tool-card cursor-pointer bg-slate-800 border border-slate-700 rounded-xl p-6 transition duration-300 relative group">
+                        <div class="flex items-start justify-between mb-4">
+                            <span class="text-4xl" x-text="tool.icon"></span>
+                            <span class="text-xs font-semibold px-2 py-1 rounded bg-slate-700 text-slate-300" x-text="tool.tag"></span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2" x-text="tool.name"></h3>
+                        <p class="text-slate-400 text-sm leading-relaxed" x-text="tool.desc"></p>
+                    </div>
+                </template>
+            </div>
+            
+            <div x-show="filteredTools.length === 0" class="text-center py-12 text-slate-500">
+                沒有找到相關工具，試試其他關鍵詞？
+            </div>
         </div>
 
-        <div class="mt-24 border-t border-slate-800 pt-16 mb-16" x-show="articles.length > 0">
+        <div class="mt-12 border-t border-slate-800 pt-16 mb-16" x-show="articles.length > 0">
             <div class="flex items-center justify-between mb-8">
                 <h2 class="text-3xl font-bold text-white border-l-4 border-blue-500 pl-4">最新 AI 動態</h2>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <template x-for="post in articles">
                     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:bg-slate-800 transition">
@@ -187,7 +233,7 @@
                         <p class="text-slate-400 text-sm mb-4 line-clamp-3" x-text="post.summary"></p>
                         <button @click="openArticleModal(post)" 
                               class="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1 cursor-pointer">
-                               閱讀全文 <span>&rarr;</span>
+                                閱讀全文 <span>&rarr;</span>
                         </button>
                     </div>
                 </template>
@@ -230,17 +276,17 @@
                 <a :href="selectedTool.url" target="_blank" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-center py-3 rounded-xl font-bold transition flex justify-center items-center gap-2">
                     訪問官網 <span>↗</span>
                 </a>
-           <button x-data="{ copied: false }" 
-                  @click="navigator.clipboard.writeText(selectedTool.url); copied = true; setTimeout(() => copied = false, 2000)" 
-                  class="px-6 border border-slate-600 hover:bg-slate-800 text-slate-300 rounded-xl font-medium transition min-w-[120px]">
-              <span x-show="!copied">複製連結</span>
-              <span x-show="copied" class="text-green-400 flex items-center gap-1">✓ 已複製</span>
-          </button>
+                <button x-data="{ copied: false }" 
+                        @click="navigator.clipboard.writeText(selectedTool.url); copied = true; setTimeout(() => copied = false, 2000)" 
+                        class="px-6 border border-slate-600 hover:bg-slate-800 text-slate-300 rounded-xl font-medium transition min-w-[120px]">
+                    <span x-show="!copied">複製連結</span>
+                    <span x-show="copied" class="text-green-400 flex items-center gap-1">✓ 已複製</span>
+                </button>
             </div>
         </div>
     </div>
 
-<div x-show="articleModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" 
+    <div x-show="articleModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" 
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
@@ -264,14 +310,7 @@
             </div>
 
             <div class="p-8 overflow-y-auto text-slate-300 leading-relaxed text-lg whitespace-pre-line min-h-[200px]">
-                
                 <div x-text="selectedArticle.content"></div>
-
-                <div x-show="!selectedArticle.content" class="mt-4 p-4 bg-red-900/50 rounded border border-red-500 text-xs text-red-200">
-                    <p class="font-bold mb-2">⚠️ 檢測不到內容，正在顯示原始數據：</p>
-                    <pre x-text="JSON.stringify(selectedArticle, null, 2)"></pre>
-                </div>
-
                 <div x-show="selectedArticle.link" class="mt-8 pt-8 border-t border-slate-800">
                     <a :href="selectedArticle.link" target="_blank" class="inline-flex items-center text-blue-400 hover:underline">
                         🔗 訪問原文鏈接
@@ -280,3 +319,5 @@
             </div>
         </div>
     </div>
+
+</body>
